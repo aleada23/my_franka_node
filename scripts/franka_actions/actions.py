@@ -32,6 +32,8 @@ class MovePose(py_trees.behaviour.Behaviour):
         self.logger.debug(f"{self.name} [MovePose::initialise()]")
         ctrl_switch.start_controller_exclusive("cartesian_impedance_example_controller")
         #CONTROLLER INIT
+        self.pose_controller.set_stiffness(2, 2, 5)
+        #self.pose_controller.set_joint_position_gains([10]*7, [5]*7)
         self.pose_controller.set_pose(self.target_pose[:3], self.target_pose[3:])
         self.listener = tf.TransformListener()
         
@@ -41,7 +43,7 @@ class MovePose(py_trees.behaviour.Behaviour):
             roll, pitch, yaw = tf.transformations.euler_from_quaternion(rot)
             current_pose = np.hstack((trans, np.array([roll, pitch, yaw])))
             error = self.target_pose - current_pose
-            if np.allclose(error[:3], 0, atol=self.tolerance):
+            if np.allclose(error[:], 0, atol=self.tolerance):
                 self.logger.debug(f"{self.name}: Reached  pose.")
                 return py_trees.common.Status.SUCCESS
         except:

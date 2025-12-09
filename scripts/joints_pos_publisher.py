@@ -2,6 +2,8 @@
 import rospy
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 import threading
+from dynamic_reconfigure.client import Client
+
 
 class JointTrajectoryPublisher:
     def __init__(self):
@@ -30,6 +32,15 @@ class JointTrajectoryPublisher:
 
         rospy.loginfo("JointTrajectoryPublisher initialized.")
 
+        self.joint_position_clients = [
+            Client(f"/motion_generators/position/gains/panda_joint{i+1}", timeout=5)
+            for i in range(7)
+        ]
+        self.joint_velocity_clients = [
+            Client(f"/motion_generators/velocity/gains/panda_joint{i+1}", timeout=5)
+            for i in range(7)
+        ]
+
         # Start publishing thread
         self.thread = threading.Thread(target=self.run)
         self.thread.daemon = True  # allow clean exit
@@ -55,6 +66,25 @@ class JointTrajectoryPublisher:
         with self.lock:
             self.current_point = point
         rospy.loginfo(f"Updated target joints via code: {point.positions}")
+
+    def set_joint_position_gains(self, p_gains, d_gains):
+        """Update joint position gains (7-element lists)"""
+        for i, client in enumerate(self.joint_position_clients):
+            try:
+                cfg = {"p": p_gains[i], "d": d_gains[i]}
+                client.update_configuration(cfg)
+            except Exception as e:
+                rospy.logerr(f"Failed to update position gains for joint {i+1}: {e}")
+
+    def set_joint_velocity_gains(self, p_gains, d_gains):
+        """Update joint velocity gains (7-element lists)"""
+        for i, client in enumerate(self.joint_velocity_clients):
+            try:
+                cfg = {"p": p_gains[i], "d": d_gains[i]}
+                client.update_configuration(cfg)
+            except Exception as e:
+                rospy.logerr(f"Failed to update velocity gains for joint {i+1}: {e}")
+
 
     def run(self):
         """Publish joint trajectory continuously"""

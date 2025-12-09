@@ -3,6 +3,7 @@ import rospy
 from geometry_msgs.msg import PoseStamped
 import tf.transformations as tft
 import threading
+from dynamic_reconfigure.client import Client
 
 class PosePublisher:
     def __init__(self):
@@ -19,6 +20,11 @@ class PosePublisher:
         
         self.lock = threading.Lock()  # thread-safe updates
         rospy.loginfo("PosePublisher initialized.")
+        print("ok")
+        self.stiffness_client = Client("/cartesian_impedance_example_controller/dynamic_reconfigure_compliance_param_node",timeout=5)
+        print("ok 2")
+        #self.joint_position_clients = [Client(f"/motion_generators/position/gains/panda_joint{i+1}", timeout=5) for i in range(7)]
+        #self.joint_velocity_clients = [Client(f"/motion_generators/velocity/gains/panda_joint{i+1}", timeout=5) for i in range(7)]
 
         # Start publishing in a separate thread so we can update poses from main
         self.thread = threading.Thread(target=self.run)
@@ -48,3 +54,36 @@ class PosePublisher:
                 self.current_pose.header.stamp = rospy.Time.now()
                 self.pub.publish(self.current_pose)
             rate.sleep()
+
+    def set_stiffness(self, translational, rotational, nullspace=5.0):
+        """Update Cartesian stiffness using dynamic_reconfigure."""
+        try:
+            cfg = {
+                "translational_stiffness": translational,
+                "rotational_stiffness": rotational,
+                "nullspace_stiffness": nullspace
+            }
+            self.stiffness_client.update_configuration(cfg)
+            rospy.loginfo(f"Updated stiffness: translational={translational}, rotational={rotational}, nullspace={nullspace}")
+        except Exception as e:
+            rospy.logerr(f"Failed to update stiffness: {e}")
+
+
+    def set_joint_position_gains(self, p_gains, d_gains):
+        """Update joint position gains (7-element lists)"""
+        for i, client in enumerate(self.joint_position_clients):
+            try:
+                cfg = {"p": p_gains[i], "d": d_gains[i]}
+                client.update_configuration(cfg)
+            except Exception as e:
+                rospy.logerr(f"Failed to update position gains for joint {i+1}: {e}")
+
+    def set_joint_velocity_gains(self, p_gains, d_gains):
+        """Update joint velocity gains (7-element lists)"""
+        for i, client in enumerate(self.joint_velocity_clients):
+            try:
+                cfg = {"p": p_gains[i], "d": d_gains[i]}
+                client.update_configuration(cfg)
+            except Exception as e:
+                rospy.logerr(f"Failed to update velocity gains for joint {i+1}: {e}")
+
