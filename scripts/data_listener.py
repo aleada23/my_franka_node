@@ -20,7 +20,7 @@ class FrankaListener:
         rospy.Subscriber("/franka_state_controller/joint_states", JointState, self.joint_state_callback)
         rospy.Subscriber("/franka_gripper/joint_states", JointState, self.gripper_joint_state_callback)
 
-        rospy.loginfo("FrankaListener initialized.")
+        #rospy.loginfo("FrankaListener initialized.")
 
         # Run ROS spin in a separate thread
         self.thread = threading.Thread(target=rospy.spin)

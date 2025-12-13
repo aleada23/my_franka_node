@@ -13,7 +13,7 @@ class BehaviorTreeManager:
             "MeasureGripperSites": actions.MeasureGripperSites,
             "MeasureAppliedHE": actions.MeasureAppliedHE,
             "MeasureGripperOpnening": actions.MeasureGripperOpnening,
-            
+            "MeasureMassWithTorque": actions.MeasureMassWithTorque
         }
         self.condition_map = {
             

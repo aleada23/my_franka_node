@@ -30,7 +30,7 @@ class JointTrajectoryPublisher:
 
         self.lock = threading.Lock()  # thread-safe updates
 
-        rospy.loginfo("JointTrajectoryPublisher initialized.")
+        #rospy.loginfo("JointTrajectoryPublisher initialized.")
 
         self.joint_position_clients = [
             Client(f"/motion_generators/position/gains/panda_joint{i+1}", timeout=5)
@@ -53,9 +53,9 @@ class JointTrajectoryPublisher:
             return
         with self.lock:
             self.current_point = msg
-        rospy.loginfo(f"Updated target joints via topic: {msg.positions}")
+        #rospy.loginfo(f"Updated target joints via topic: {msg.positions}")
 
-    def set_joints(self, joint_list, duration=1.0):
+    def set_joints(self, joint_list, duration=2.0):
         """Update joint targets directly from code"""
         if len(joint_list) != 7:
             rospy.logwarn("Joint list must have 7 elements. Ignoring.")
@@ -65,7 +65,7 @@ class JointTrajectoryPublisher:
         point.time_from_start = rospy.Duration(duration)
         with self.lock:
             self.current_point = point
-        rospy.loginfo(f"Updated target joints via code: {point.positions}")
+        #rospy.loginfo(f"Updated target joints via code: {point.positions}")
 
     def set_joint_position_gains(self, p_gains, d_gains):
         """Update joint position gains (7-element lists)"""
@@ -88,14 +88,17 @@ class JointTrajectoryPublisher:
 
     def run(self):
         """Publish joint trajectory continuously"""
-        rate = rospy.Rate(50)  # 50 Hz is enough for trajectory controller
+        rate = rospy.Rate(50)
         traj_msg = JointTrajectory()
         traj_msg.joint_names = self.joint_names
 
         while not rospy.is_shutdown():
             with self.lock:
-                traj_msg.points = [self.current_point]
-                self.pub.publish(traj_msg)
+                try:
+                    traj_msg.points = [self.current_point]
+                    self.pub.publish(traj_msg)
+                except:
+                    pass
             rate.sleep()
 
 

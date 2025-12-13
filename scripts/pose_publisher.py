@@ -19,10 +19,8 @@ class PosePublisher:
         self.current_pose.header.frame_id = "panda_link0"
         
         self.lock = threading.Lock()  # thread-safe updates
-        rospy.loginfo("PosePublisher initialized.")
-        print("ok")
+        #rospy.loginfo("PosePublisher initialized.")
         self.stiffness_client = Client("/cartesian_impedance_example_controller/dynamic_reconfigure_compliance_param_node",timeout=5)
-        print("ok 2")
         #self.joint_position_clients = [Client(f"/motion_generators/position/gains/panda_joint{i+1}", timeout=5) for i in range(7)]
         #self.joint_velocity_clients = [Client(f"/motion_generators/velocity/gains/panda_joint{i+1}", timeout=5) for i in range(7)]
 
@@ -34,7 +32,7 @@ class PosePublisher:
         """Callback for ROS topic updates"""
         with self.lock:
             self.current_pose = msg
-            rospy.loginfo(f"Updated target pose via topic: {msg.pose.position}")
+            #rospy.loginfo(f"Updated target pose via topic: {msg.pose.position}")
 
     def set_pose(self, xyz, euler):
         """Update pose directly from code"""
@@ -45,7 +43,7 @@ class PosePublisher:
         msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w = quat
         with self.lock:
             self.current_pose = msg
-        rospy.loginfo(f"Updated target pose via code: {xyz}")
+        #rospy.loginfo(f"Updated target pose via code: {xyz}")
 
     def run(self):
         rate = rospy.Rate(100)  # 100 Hz
@@ -64,7 +62,7 @@ class PosePublisher:
                 "nullspace_stiffness": nullspace
             }
             self.stiffness_client.update_configuration(cfg)
-            rospy.loginfo(f"Updated stiffness: translational={translational}, rotational={rotational}, nullspace={nullspace}")
+            #rospy.loginfo(f"Updated stiffness: translational={translational}, rotational={rotational}, nullspace={nullspace}")
         except Exception as e:
             rospy.logerr(f"Failed to update stiffness: {e}")
 

@@ -9,8 +9,8 @@ def start_controller_exclusive(controller_name, strictness=2):
     Safe for repeated calls (idempotent).
     """
 
-    rospy.wait_for_service('/controller_manager/list_controllers')
-    rospy.wait_for_service('/controller_manager/switch_controller')
+    #rospy.wait_for_service('/controller_manager/list_controllers')
+    #rospy.wait_for_service('/controller_manager/switch_controller')
 
     list_srv   = rospy.ServiceProxy('/controller_manager/list_controllers', ListControllers)
     switch_srv = rospy.ServiceProxy('/controller_manager/switch_controller', SwitchController)
@@ -32,7 +32,7 @@ def start_controller_exclusive(controller_name, strictness=2):
     if controller_name not in running:
         start_list = [controller_name]
 
-    rospy.loginfo(f"[start_controller_exclusive] Starting: {start_list}, Stopping: {stop_list}")
+    #rospy.loginfo(f"[start_controller_exclusive] Starting: {start_list}, Stopping: {stop_list}")
 
     # ---- Perform the switch ----
     try:
@@ -42,7 +42,7 @@ def start_controller_exclusive(controller_name, strictness=2):
             strictness=strictness
         )
         if resp.ok:
-            rospy.loginfo("[start_controller_exclusive] Switch OK.")
+            #rospy.loginfo("[start_controller_exclusive] Switch OK.")
             return True
         else:
             rospy.logerr("[start_controller_exclusive] Switch FAILED.")
@@ -70,14 +70,14 @@ def wait_until_running(controller_name, timeout=5.0, rate_hz=20):
     while not rospy.is_shutdown():
         # timeout reached?
         if rospy.get_time() - start_time > timeout:
-            rospy.logwarn(f"[wait_until_running] Timeout: {controller_name} not running after {timeout}s.")
+            #rospy.logwarn(f"[wait_until_running] Timeout: {controller_name} not running after {timeout}s.")
             return False
 
         try:
             controllers = list_srv().controller
             for c in controllers:
                 if c.name == controller_name and c.state == "running":
-                    rospy.loginfo(f"[wait_until_running] Controller '{controller_name}' is running.")
+                    #rospy.loginfo(f"[wait_until_running] Controller '{controller_name}' is running.")
                     return True
         except rospy.ServiceException as e:
             rospy.logerr(f"[wait_until_running] Service error: {e}")

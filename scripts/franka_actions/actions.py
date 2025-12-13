@@ -32,8 +32,7 @@ class MovePose(py_trees.behaviour.Behaviour):
         self.logger.debug(f"{self.name} [MovePose::initialise()]")
         ctrl_switch.start_controller_exclusive("cartesian_impedance_example_controller")
         #CONTROLLER INIT
-        self.pose_controller.set_stiffness(2, 2, 5)
-        #self.pose_controller.set_joint_position_gains([10]*7, [5]*7)
+        self.pose_controller.set_stiffness(200, 200, 1)
         self.pose_controller.set_pose(self.target_pose[:3], self.target_pose[3:])
         self.listener = tf.TransformListener()
         
@@ -43,8 +42,9 @@ class MovePose(py_trees.behaviour.Behaviour):
             roll, pitch, yaw = tf.transformations.euler_from_quaternion(rot)
             current_pose = np.hstack((trans, np.array([roll, pitch, yaw])))
             error = self.target_pose - current_pose
-            if np.allclose(error[:], 0, atol=self.tolerance):
+            if np.allclose(error[:3], 0, atol=self.tolerance):
                 self.logger.debug(f"{self.name}: Reached  pose.")
+                print("reached pose: ", current_pose)
                 return py_trees.common.Status.SUCCESS
         except:
             pass
@@ -73,11 +73,13 @@ class MoveJoints(py_trees.behaviour.Behaviour):
         self.data_listener = FrankaListener()
         
     def update(self):      
-        try:         
+        try:
+                   
             q = self.data_listener.get_joint_positions()
             error = self.target_pos - q
             if np.allclose(error[:], 0, atol=self.tolerance):
                 self.logger.debug(f"{self.name}: Reached joints position.")
+                print("rached configuration: ", q)
                 return py_trees.common.Status.SUCCESS
         except:
             pass
@@ -99,12 +101,15 @@ class OpenGripper(py_trees.behaviour.Behaviour):
         goal = MoveGoal(width=self.opening, speed=0.1)
         self.client.send_goal(goal)
         self.listener = FrankaListener()
+        self.t_start = rospy.get_time()
 
     def update(self):
         try:
+            t = rospy.get_time()
             q = self.listener.get_gripper_joint_positions()
-            if q[0] > 0.0014 and q[1] > 0.0014:
+            if q[0] > 0.0014 and q[1] > 0.0014 and (t - self.t_start) >3:
                 self.logger.debug(f"{self.name}: Gripper is open.")
+                print("gripper is open")
                 return py_trees.common.Status.SUCCESS
         except:
             pass
@@ -126,6 +131,7 @@ class CloseGripper(py_trees.behaviour.Behaviour):
     def initialise(self):
         self.logger.debug(f"{self.name} [CloseGripper::initialise()]")
         self.opening = 0.00
+        self.t_start = rospy.get_time()
 
         goal = MoveGoal(width=self.opening, speed=0.1)
         self.client.send_goal(goal)
@@ -133,9 +139,11 @@ class CloseGripper(py_trees.behaviour.Behaviour):
 
     def update(self):
         try:
+            t = rospy.get_time()  
             q = self.listener.get_gripper_joint_positions()
-            if q[0] <= 0.0013 and q[1] <= 0.0013:
+            if q[0] <= 0.0013 and q[1] <= 0.0013 and (t - self.t_start) >3:
                 self.logger.debug(f"{self.name}: Gripper is close.")
+                print("gripper is closed", q)
                 return py_trees.common.Status.SUCCESS
         except:
             pass
@@ -160,6 +168,7 @@ class MoveDownUntillContact(py_trees.behaviour.Behaviour):
         self.logger.debug(f"{self.name} [MoveDownUntillContact::initialise()]")
         #CONTROLLER INIT
         ctrl_switch.start_controller_exclusive("cartesian_impedance_example_controller")
+        self.pose_controller.set_stiffness(100, 100, 5)
         self.pose_controller.set_pose(self.target_pose[:3], self.target_pose[3:])
         self.listener = tf.TransformListener()
         self.t_start = rospy.get_time()
@@ -179,11 +188,15 @@ class MoveDownUntillContact(py_trees.behaviour.Behaviour):
             Jac = jac.panda_jac(q)
             J_inv_T = np.linalg.pinv(Jac.T)
             h_e = J_inv_T @ tau
-            print(np.linalg.norm(h_e[3:]))
+            
             self.target_pose = self.target_pose + np.array([0.0, 0.0, -0.001, 0.0, 0.0, 0.0])
             self.pose_controller.set_pose(self.target_pose[:3], self.target_pose[3:])
-            if (t - self.t_start) >13 and np.linalg.norm(h_e[3:])>2:
+            if (t - self.t_start) >5 and np.linalg.norm(h_e[3:])>2:
                 self.logger.debug(f"{self.name}: Reached  pose.")
+                (trans, rot) = self.listener.lookupTransform("panda_link0", "panda_EE", rospy.Time(0))
+                roll, pitch, yaw = tf.transformations.euler_from_quaternion(rot)
+                current_pose = np.hstack((trans, np.array([roll, pitch, yaw])))
+                print("table touched, e-e pose: ", current_pose)
                 return py_trees.common.Status.SUCCESS
         except:
             pass
@@ -213,7 +226,7 @@ class MeasureGripperSites(py_trees.behaviour.Behaviour):
                 self.pose_buffer.append(current_pose)
             else:
                 mean_pose = np.mean(np.array(self.pose_buffer), axis=0)
-                print("Table height", mean_pose[2])
+                print("MeasureGripperSites position", mean_pose)
                 return py_trees.common.Status.SUCCESS
         except:
             pass
@@ -246,13 +259,44 @@ class MeasureAppliedHE(py_trees.behaviour.Behaviour):
             Jac = jac.panda_jac(q)
             J_inv_T = np.linalg.pinv(Jac.T)
             h_e = J_inv_T @ tau
+            
+            print("mean h_e", h_e)
+            #return py_trees.common.Status.SUCCESS
+        except:
+            pass
+        return py_trees.common.Status.RUNNING
+    def terminate(self, new_status):
+        self.logger.debug(f"{self.name} [MeasureGripperSites::terminate()] -> {new_status}")
+
+class MeasureMassWithTorque(py_trees.behaviour.Behaviour):
+    def __init__(self, name):
+        super().__init__(name)
+
+    def setup(self, **kwargs):
+        self.logger.debug(f"{self.name} [MeasureGripperSites::setup()]")
+
+    def initialise(self):
+        self.logger.debug(f"{self.name} [MeasureGripperSites::initialise()]")
+        self.t_start = rospy.get_time()
+        self.data_listener = FrankaListener()
+        self.mass_buffer = []
+    
+    def update(self):
+        try:
+            t = rospy.get_time()
+            #get tau and joint position
+            tau = self.data_listener.get_joint_torques()
+            q = self.data_listener.get_joint_positions()
+            #compute he
+            Jac = jac.panda_jac(q)
+            J_inv_T = np.linalg.pinv(Jac.T)
+            h_e = J_inv_T @ tau
             if (t - self.t_start)<5:
                 if (t - self.t_start)>4:
                     self.mass_buffer.append(h_e)
             elif (t - self.t_start)>=5:
-                print("ok")
                 mean_mass = np.mean(np.array(self.mass_buffer), axis=0)
-                print("h_e", mean_mass)
+                print("Mass meas. h_e", mean_mass)
                 return py_trees.common.Status.SUCCESS
         except:
             pass
@@ -281,8 +325,8 @@ class MeasureGripperOpnening(py_trees.behaviour.Behaviour):
                 if (t - self.t_start)>2:
                     self.positions_buffer.append(q)
             elif (t - self.t_start)>=3:
-                h_e_mean = np.mean(np.array(self.positions_buffer), axis=0)
-                print(h_e_mean)
+                q_mean = np.mean(np.array(self.positions_buffer), axis=0)
+                print("gripper opening", q_mean)
                 return py_trees.common.Status.SUCCESS
         except:
             pass
