@@ -1,0 +1,40 @@
+OUTSIDE CONTAINER:
+Start docker container: $ docker start ros_noetic
+Access control list: $ xhost +local:root
+Execute container: $ docker exec -it ros_noetic bash
+Stop container properly: $ docker stop ros_noetic
+
+IN CONTAINER:
+Launch Gazebo Simulation: source ~/catkin_ws/devel/setup.bash
+			  source /opt/ros/noetic/setup.bash
+			  LIBGL_ALWAYS_SOFTWARE=1 roslaunch franka_gazebo panda.launch
+Load the Controller: rosservice call /controller_manager/load_controller   "name: 'cartesian_impedance_example_controller'"
+Start the controller: rosservice call /controller_manager/switch_controller   "{start_controllers: ['cartesian_impedance_example_controller'], stop_controllers: [], strictness: 2}"
+List active controllers: rosservice call /controller_manager/list_controllers
+Command via terminal: rostopic pub -1 /cartesian_impedance_example_controller/equilibrium_pose geometry_msgs/PoseStamped "header:
+  frame_id: 'panda_link0'
+pose:
+  position: {x: 0.3, y: 0.0, z: 0.5}
+  orientation: {x: 0.0, y: 0.707, z: 0.0, w: 0.707}"
+Stop the controller: rosservice call /controller_manager/switch_controller \
+  "{start_controllers: [], stop_controllers: ['cartesian_impedance_example_controller'], strictness: 2}"
+
+
+Build new scripts: catkin_make
+		   source devel/setup.bash
+		   
+Build new python scripts and make them executable: chmod +x ~/catkin_ws/src/your_package/scripts/cartesian_impedance_publisher.py
+Run the python script for control: source ~/catkin_ws/devel/setup.bash
+				   rosrun my_franka_node  cartesian_impedance_publisher.py
+				   
+				   
+Find for running: ps -ef | grep python
+Kill them: 	  kill -9 #number
+Kill all related to main: ps aux | grep main_BT.py | grep -v grep | awk '{print $2}' | xargs -r kill -9
+
+
+LOAD BOTH CONTROLLERS: rosservice call /controller_manager/load_controller "name: 'position_joint_trajectory_controller'"
+			rosservice call /controller_manager/load_controller   "name: 'cartesian_impedance_example_controller'"
+			
+Reconfigure gains: rosrun rqt_reconfigure rqt_reconfigure
+
