@@ -55,7 +55,7 @@ class JointTrajectoryPublisher:
             self.current_point = msg
         #rospy.loginfo(f"Updated target joints via topic: {msg.positions}")
 
-    def set_joints(self, joint_list, duration=2.0):
+    def set_joints(self, joint_list, duration=5.0):
         """Update joint targets directly from code"""
         if len(joint_list) != 7:
             rospy.logwarn("Joint list must have 7 elements. Ignoring.")
@@ -88,7 +88,7 @@ class JointTrajectoryPublisher:
 
     def run(self):
         """Publish joint trajectory continuously"""
-        rate = rospy.Rate(50)
+        rate = rospy.Rate(100)
         traj_msg = JointTrajectory()
         traj_msg.joint_names = self.joint_names
 

@@ -64,6 +64,16 @@ class FrankaListener:
             joint_map = {name: i for i, name in enumerate(self.gripper_latest_joint_state.name)}
             return np.array([self.gripper_latest_joint_state.position[joint_map[j]] for j in joint_order])
 
+    def get_gripper_joint_efforts(self):
+        with self.lock:
+            if self.gripper_latest_joint_state is None:
+                return None
+            joint_order = [
+                "panda_finger_joint1", "panda_finger_joint1"
+            ]
+            joint_map = {name: i for i, name in enumerate(self.gripper_latest_joint_state.name)}
+            return np.array([self.gripper_latest_joint_state.effort[joint_map[j]] for j in joint_order])
+
     def get_joint_velocities(self):
         with self.lock:
             if self.latest_joint_state is None:

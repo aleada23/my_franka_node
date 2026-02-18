@@ -1,9 +1,13 @@
 import py_trees
-from franka_actions import actions
-class BehaviorTreeManager:
-    def __init__(self):
+from franka_actions import actions, checks
 
-        # Map action names to classes
+class BehaviorTreeManager:
+    def __init__(self, pose_controller, joints_controller, data_listener):
+        self.pose_controller = pose_controller
+        self.joints_controller = joints_controller
+        self.data_listener = data_listener
+
+        # Map strings to Action classes
         self.action_map = {
             "MovePose": actions.MovePose,
             "MoveJoints": actions.MoveJoints,
@@ -11,69 +15,95 @@ class BehaviorTreeManager:
             "CloseGripper": actions.CloseGripper,
             "MoveDownUntillContact": actions.MoveDownUntillContact,
             "MeasureGripperSites": actions.MeasureGripperSites,
-            "MeasureAppliedHE": actions.MeasureAppliedHE,
-            "MeasureGripperOpnening": actions.MeasureGripperOpnening,
             "MeasureMassWithTorque": actions.MeasureMassWithTorque
         }
+        
+        # Map strings to Condition classes
         self.condition_map = {
-            
+            "is_at_home": checks.IsAtHome,
+            "is_at_pose": checks.IsAtPose,
+            "is_grasped": checks.IsGrasped,
+            "is_gripper_open": checks.IsGripperOpen,
+            "is_contact_detected": checks.IsContactDetected
         }
 
-    def build_tree_from_list(self, bt_list):
-        if isinstance(bt_list, list) and len(bt_list) > 0:
-            node_type = bt_list[0]
-            children = bt_list[1:] if len(bt_list) > 1 else []
+    def build_tree_from_json(self, node_data):
+        """
+        Recursively builds the tree from the dictionary structure.
+        """
+        node_type = node_data.get("type")
+        
+        # --- Composite Nodes ---
+        if node_type == "Sequence":
+            node = py_trees.composites.Sequence(name="Sequence", memory=True)
+            for child in node_data.get("children", []):
+                node.add_child(self.build_tree_from_json(child))
+            return node
 
-            if node_type.startswith("Sequence"):
-                seq_node = py_trees.composites.Sequence(name="Sequence", memory=True)
-                for child in children:
-                    seq_node.add_child(self.build_tree_from_list(child))
-                return seq_node
-            
-            elif node_type.startswith("Selector"):
-                seq_node = py_trees.composites.Selector(name="Selector", memory=True)
-                for child in children:
-                    seq_node.add_child(self.build_tree_from_list(child))
-                return seq_node
+        elif node_type == "Selector":
+            node = py_trees.composites.Selector(name="Selector", memory=False)
+            for child in node_data.get("children", []):
+                node.add_child(self.build_tree_from_json(child))
+            return node
 
-            elif node_type.startswith("Parallel"):
-                fb_node = py_trees.composites.Parallel(name="Parallel", policy=py_trees.common.ParallelPolicy.SuccessOnOne())
-                for child in children:
-                    fb_node.add_child(self.build_tree_from_list(child))
-                return fb_node
+        elif node_type == "Parallel":
+            # Policy: SuccessOnOne is standard for Condition + Action pairs
+            node = py_trees.composites.Parallel(
+                name="Parallel", 
+                policy=py_trees.common.ParallelPolicy.SuccessOnOne()
+            )
+            for child in node_data.get("children", []):
+                node.add_child(self.build_tree_from_json(child))
+            return node
 
-            else:
-                # Leaf node: action or condition
-                # bt_list can be like ["MovePose", {"desired_pose": "object1_pose"}]
-                if isinstance(bt_list, list) and len(bt_list) == 2 and isinstance(bt_list[1], dict):
-                    node_name = bt_list[0]
-                    params = bt_list[1]
-                else:
-                    node_name = bt_list
-                    params = {}
-                if node_name in self.action_map.keys():
-                    return self.action_map[node_name](node_name, **params)
-                elif node_name in self.condition_map.keys():
-                    return self.condition_map[node_name](node_name, **params)
-                else:
-                    raise ValueError(f"Unknown node type: {node_name}")
+        # --- Leaf Nodes (Actions & Conditions) ---
+        node_name = node_data.get("name")
+        args = node_data.get("args", [])
+
+        if node_type == "Action":
+            return self._create_action(node_name, args)
+        elif node_type == "Condition":
+            return self._create_condition(node_name, args)
+        
+        raise ValueError(f"Unknown node configuration: {node_data}")
+
+    def _create_action(self, name, args):
+        cls = self.action_map.get(name)
+        if not cls:
+            raise ValueError(f"Action {name} not found in map.")
+        
+        # Inject required hardware interfaces based on the action type
+        if name == "MovePose" or name == "MoveDownUntillContact":
+            return cls(name, self.pose_controller, *args)
+        elif name == "MoveJoints":
+            return cls(name, self.joints_controller, *args)
+        elif "Measure" in name:
+            return cls(name, self.data_listener, *args)
         else:
-            raise ValueError(f"Invalid BT list: {bt_list}")
+            return cls(name, *args)
 
-    def build_tree(self, bt_list):
-        self.root_node = py_trees.trees.BehaviourTree(self.build_tree_from_list(bt_list))
+    def _create_condition(self, name, args):
+        cls = self.condition_map.get(name)
+        if not cls:
+            raise ValueError(f"Condition {name} not found in map.")
+        
+        # Most conditions need the data_listener to check states
+        return cls(name, self.data_listener, *args)
+
+    def build_tree(self, json_structure):
+        # Handle the top level "O_BT" wrapper if present
+        if "O_BT" in json_structure:
+            root_data = json_structure["O_BT"]
+        else:
+            root_data = json_structure
+            
+        self.root_node = py_trees.trees.BehaviourTree(self.build_tree_from_json(root_data))
         return self.root_node
 
-
-    def tick(self, display_tree = False, display_blackboard = False):
+    def tick(self, display_tree=False):
         if display_tree:
             print(py_trees.display.unicode_tree(self.root_node.root, show_status=True))
-        if display_blackboard:
-            print(py_trees.display.unicode_blackboard())
-        if self.root_node.root.status in [py_trees.common.Status.RUNNING,py_trees.common.Status.INVALID]:
-            self.root_node.tick()
         
+        
+        self.root_node.tick()
         return self.root_node.root.status
-
-    def print_tree(self):
-        py_trees.display.render_dot_tree(self.root_node.root)
