@@ -7,7 +7,6 @@ class BehaviorTreeManager:
         self.joints_controller = joints_controller
         self.data_listener = data_listener
 
-        # Map strings to Action classes
         self.action_map = {
             "MovePose": actions.MovePose,
             "MoveJoints": actions.MoveJoints,
@@ -18,7 +17,6 @@ class BehaviorTreeManager:
             "MeasureMassWithTorque": actions.MeasureMassWithTorque
         }
         
-        # Map strings to Condition classes
         self.condition_map = {
             "is_at_home": checks.IsAtHome,
             "is_at_pose": checks.IsAtPose,
@@ -33,7 +31,6 @@ class BehaviorTreeManager:
         """
         node_type = node_data.get("type")
         
-        # --- Composite Nodes ---
         if node_type == "Sequence":
             node = py_trees.composites.Sequence(name="Sequence", memory=True)
             for child in node_data.get("children", []):
@@ -47,16 +44,11 @@ class BehaviorTreeManager:
             return node
 
         elif node_type == "Parallel":
-            # Policy: SuccessOnOne is standard for Condition + Action pairs
-            node = py_trees.composites.Parallel(
-                name="Parallel", 
-                policy=py_trees.common.ParallelPolicy.SuccessOnOne()
-            )
+            node = py_trees.composites.Parallel(name="Parallel", policy=py_trees.common.ParallelPolicy.SuccessOnOne())
             for child in node_data.get("children", []):
                 node.add_child(self.build_tree_from_json(child))
             return node
 
-        # --- Leaf Nodes (Actions & Conditions) ---
         node_name = node_data.get("name")
         args = node_data.get("args", [])
 
@@ -72,7 +64,6 @@ class BehaviorTreeManager:
         if not cls:
             raise ValueError(f"Action {name} not found in map.")
         
-        # Inject required hardware interfaces based on the action type
         if name == "MovePose" or name == "MoveDownUntillContact":
             return cls(name, self.pose_controller, *args)
         elif name == "MoveJoints":
@@ -87,11 +78,9 @@ class BehaviorTreeManager:
         if not cls:
             raise ValueError(f"Condition {name} not found in map.")
         
-        # Most conditions need the data_listener to check states
         return cls(name, self.data_listener, *args)
 
     def build_tree(self, json_structure):
-        # Handle the top level "O_BT" wrapper if present
         if "O_BT" in json_structure:
             root_data = json_structure["O_BT"]
         else:

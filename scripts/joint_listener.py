@@ -5,12 +5,6 @@ from sensor_msgs.msg import JointState
 import numpy as np
 
 def franka_state_callback(msg):
-    #print("\n=== Franka State ===")
-    #print("Joint positions (q):", msg.q)
-    #print("Joint velocities (dq):", msg.dq)
-    #print("Joint torques (tau_J):", msg.tau_J)
-    #print("End-effector pose (O_T_EE):", msg.O_T_EE)
-    #print("Robot mode:", msg.robot_mode)
 
     delta = 1e-6
     jacobian = np.zeros((6, 7))
@@ -20,7 +14,7 @@ def franka_state_callback(msg):
     for i in range(7):
         dq = np.zeros(7)
         dq[i] = delta
-        T_new = T0.copy()  # In real application, call FK here
+        T_new = T0.copy()  
         jacobian[0:3, i] = (T_new[0:3, 3] - T0[0:3, 3]) / delta
         jacobian[3:6, i] = np.zeros(3)
 
@@ -28,11 +22,6 @@ def franka_state_callback(msg):
     
 
 def joint_state_callback(msg):
-    #print("\n=== Joint States ===")
-    #print("Joint names:", msg.name)
-    #print("Positions:", msg.position)
-    #print("Velocities:", msg.velocity)
-    #print("Effort (torques):", msg.effort)
 
     joint_order = [
         "panda_joint1",

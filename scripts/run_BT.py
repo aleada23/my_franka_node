@@ -11,14 +11,11 @@ import py_trees
 if __name__ == "__main__":
     rospy.init_node("panda_bt_control_node", anonymous=True)
     
-    # 1. Initialize Hardware Interfaces
     listener = FrankaListener()
-    pp = PosePublisher()             # Cartesian Controller
-    jj = JointTrajectoryPublisher()  # Joint Controller
-    rospy.sleep(1.0)                 # Warmup time for ROS publishers/subscribers
+    pp = PosePublisher()            
+    jj = JointTrajectoryPublisher()  
+    rospy.sleep(1.0)                
 
-    # 2. Define Pose/Config Constants (The "Knowledge Base")
-    # This maps the string names in your JSON to actual robot coordinates.
     z_offset = np.array([0, 0, 0.1, 0, 0, 0])
     poses = {
         "home": [0, 0, 0, -1.57079, 0, 1.57079, -0.7853],
@@ -27,8 +24,6 @@ if __name__ == "__main__":
         "temp_pose_1 + z_offset": [0.4, 0.0, 0.4, 0, np.pi, 0],
     }
 
-    # 3. Define the Behavior Tree using the new JSON structure
-    # This structure matches the "O_BT" dictionary you provided
     bt_json = {
         "type": "Selector",
         "children": [
@@ -74,27 +69,16 @@ if __name__ == "__main__":
         ]
     }
 
-    # 4. Initialize Manager and Build Tree
-    # We pass the hardware interfaces once to the manager
-    bt_manager = BehaviorTreeManager(
-        pose_controller=pp, 
-        joints_controller=jj, 
-        data_listener=listener
-    )
+    bt_manager = BehaviorTreeManager(pose_controller=pp, joints_controller=jj, data_listener=listener)
     
     tree = bt_manager.build_tree(bt_json)
     
-    # Optional: Render the tree to a file to verify structure
-    # bt_manager.print_tree()
-
     rospy.loginfo("Behavior Tree initialized. Starting tick loop...")
 
-    # 5. Execution Loop
-    rate = rospy.Rate(10) # 10Hz
+    rate = rospy.Rate(10)
     while not rospy.is_shutdown():
         status = bt_manager.tick(display_tree=True)
         if status == py_trees.common.Status.FAILURE:
-            # Find the tip (the node that actually failed)
             for node in tree.root.iterate():
                 if node.status == py_trees.common.Status.FAILURE:
                     print(f"Node {node.name} failed!")

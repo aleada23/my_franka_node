@@ -43,7 +43,6 @@ class CloseGripper(py_trees.behaviour.Behaviour):
 
     def initialise(self):
         self.client.wait_for_server()
-        # Closes fully (0.0) or until grasp force reached
         self.client.send_goal(MoveGoal(width=0.0, speed=0.1))
 
     def update(self):
@@ -63,7 +62,7 @@ class MoveDownUntillContact(py_trees.behaviour.Behaviour):
         self.pose_controller.set_stiffness(100, 100, 5)
 
     def update(self):
-        self.cmd_pose[2] -= 0.001 # Incrementally command lower
+        self.cmd_pose[2] -= 0.001
         self.pose_controller.set_pose(self.cmd_pose[:3], self.cmd_pose[3:])
         return py_trees.common.Status.RUNNING
 
@@ -84,11 +83,9 @@ class MeasureGripperSites(py_trees.behaviour.Behaviour):
     def __init__(self, name):
         super().__init__(name)
         self.listener = tf.TransformListener()
-
     def update(self):
         try:
             (trans, rot) = self.listener.lookupTransform("panda_link0", "panda_EE", rospy.Time(0))
-            # Logic to compute tip positions relative to EE could go here
             self.logger.info(f"Gripper Sites Measured at: {trans}")
             return py_trees.common.Status.SUCCESS
         except:
@@ -111,7 +108,6 @@ class MeasureMassWithTorque(py_trees.behaviour.Behaviour):
             h_e = np.linalg.pinv(jac.panda_jac(q).T) @ tau
             self.samples.append(h_e)
             return py_trees.common.Status.RUNNING
-        
         mass_estimate = np.mean(self.samples, axis=0)
         self.logger.info(f"Object mass estimate (wrench): {mass_estimate}")
         return py_trees.common.Status.SUCCESS

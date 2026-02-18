@@ -19,22 +19,18 @@ def start_controller_exclusive(controller_name, strictness=2):
     controllers = list_srv().controller
     running = {c.name for c in controllers if (c.state == "running" and ("position_joint_trajectory_controller" in c.name or "cartesian_impedance_example_controller" in c.name))}
 
-    # ---- If our controller is already the ONLY running one, do nothing ----
     #if running == {controller_name}:
     #    rospy.loginfo(f"[start_controller_exclusive] '{controller_name}' already exclusively running.")
     #    return True
 
-    # ---- Determine which controllers must be stopped ----
     stop_list = [c for c in running if c != controller_name]
 
-    # ---- Determine if we need to start our controller ----
     start_list = []
     if controller_name not in running:
         start_list = [controller_name]
 
     #rospy.loginfo(f"[start_controller_exclusive] Starting: {start_list}, Stopping: {stop_list}")
 
-    # ---- Perform the switch ----
     try:
         resp = switch_srv(
             start_controllers=start_list,

@@ -2,7 +2,6 @@
 import rospy
 from franka_msgs.msg import FrankaState
 from sensor_msgs.msg import JointState
-#from franka_gripper.msg import JointState
 import numpy as np
 import threading
 
@@ -38,10 +37,6 @@ class FrankaListener:
         with self.lock:
             self.gripper_latest_joint_state = msg
 
-
-    # ----------------------------
-    # Methods to access data easily
-    # ----------------------------
     def get_joint_positions(self):
         with self.lock:
             if self.latest_joint_state is None:
