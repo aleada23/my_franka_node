@@ -52,19 +52,26 @@ class CloseGripper(py_trees.behaviour.Behaviour):
         return py_trees.common.Status.RUNNING
 
 class MoveDownUntillContact(py_trees.behaviour.Behaviour):
-    def __init__(self, name, pose_controller, current_pose):
+    def __init__(self, name, pose_controller, current_pose= None):
         super().__init__(name)
         self.pose_controller = pose_controller
         self.cmd_pose = np.array(current_pose)
+        self.listener = tf.TransformListener()
 
     def initialise(self):
         ctrl_switch.start_controller_exclusive("cartesian_impedance_example_controller")
         self.pose_controller.set_stiffness(100, 100, 5)
 
     def update(self):
-        self.cmd_pose[2] -= 0.001
-        self.pose_controller.set_pose(self.cmd_pose[:3], self.cmd_pose[3:])
-        return py_trees.common.Status.RUNNING
+        try:
+            (trans, rot) = self.listener.lookupTransform("panda_link0", "panda_EE", rospy.Time(0))
+            self.cmd_pose = np.hstack((trans, rot))
+            print(self.cmd_pose)
+            self.cmd_pose[2] -= 0.001
+            self.pose_controller.set_pose(self.cmd_pose[:3], self.cmd_pose[3:])
+            return py_trees.common.Status.RUNNING
+        except:
+            return py_trees.common.Status.RUNNING
 
 class MoveJoints(py_trees.behaviour.Behaviour):
     def __init__(self, name, joints_controller, target_pos):

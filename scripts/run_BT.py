@@ -19,55 +19,126 @@ if __name__ == "__main__":
     z_offset = np.array([0, 0, 0.1, 0, 0, 0])
     poses = {
         "home": [0, 0, 0, -1.57079, 0, 1.57079, -0.7853],
-        "green_cube_0": [0.4, 0.0, 0.3, 0, np.pi, 0],
-        "green_cube_0 + z_offset": ([0.5, 0.0, 0.3, 0, np.pi, 0] + z_offset),
-        "temp_pose_1 + z_offset": [0.4, 0.0, 0.4, 0, np.pi, 0],
+        "yellow_cube_2": [0.4, 0.0, 0.3, 0, np.pi, 0],
+        "yellow_cube_2 + z_offset": ([0.5, 0.0, 0.3, 0, np.pi, 0] + z_offset),
+        "blue_cube_3": [0.4, 0.0, 0.3, 0, np.pi, 0],
+        "blue_cube_3 + z_offset": ([0.5, 0.0, 0.3, 0, np.pi, 0] + z_offset),
+        "temp_pose_2 + z_offset": [0.4, 0.0, 0.4, 0, np.pi, 0],
     }
 
     bt_json = {
         "type": "Selector",
         "children": [
-            {"type": "Condition", "name": "is_at_home", "args": [poses["home"]]},
-            {
-                "type": "Sequence",
+          {
+            "type": "Condition",
+            "name": "is_at_home",
+            "args": [poses["home"]]
+          },
+          {
+            "type": "Sequence",
+            "children": [
+              {
+                "type": "Selector",
                 "children": [
-                    {
-                        "type": "Selector",
-                        "children": [
-                            {"type": "Condition", "name": "is_grasped", "args": []},
-                            {
-                                "type": "Sequence",
-                                "children": [
-                                    {
-                                        "type": "Selector",
-                                        "children": [
-                                            {"type": "Condition", "name": "is_gripper_open", "args": []},
-                                            {"type": "Action", "name": "OpenGripper", "args": []}
-                                        ]
-                                    },
-                                    {
-                                        "type": "Parallel",
-                                        "children": [
-                                            {"type": "Condition", "name": "is_at_pose", "args": [poses["green_cube_0 + z_offset"]]},
-                                            {"type": "Action", "name": "MovePose", "args": [poses["green_cube_0 + z_offset"]]}
-                                        ]
-                                    },
-                                    {"type": "Action", "name": "CloseGripper", "args": []}
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        "type": "Parallel",
-                        "children": [
-                            {"type": "Condition", "name": "is_at_home", "args": [poses["home"]]},
-                            {"type": "Action", "name": "MoveJoints", "args": [poses["home"]]}
-                        ]
-                    }
+                  { "type": "Condition", "name": "is_gripper_open", "args": [] },
+                  { "type": "Action", "name": "OpenGripper", "args": [] }
                 ]
-            }
+              },
+              {
+                "type": "Parallel",
+                "children": [
+                  { "type": "Condition", "name": "is_at_pose", "args": [poses["yellow_cube_2 + z_offset"]] },
+                  { "type": "Action", "name": "MovePose", "args": [poses["yellow_cube_2 + z_offset"]] }
+                ]
+              },
+              {
+                "type": "Parallel",
+                "children": [
+                  { "type": "Condition", "name": "is_at_pose", "args": [poses["yellow_cube_2"]] },
+                  { "type": "Action", "name": "MovePose", "args": [poses["yellow_cube_2"]] }
+                ]
+              },
+              { "type": "Action", "name": "CloseGripper", "args": [] },
+              {
+                "type": "Parallel",
+                "children": [
+                  { "type": "Condition", "name": "is_at_pose", "args": [poses["yellow_cube_2 + z_offset"]] },
+                  { "type": "Action", "name": "MovePose", "args": [poses["yellow_cube_2 + z_offset"]] }
+                ]
+              },
+              {
+                "type": "Parallel",
+                "children": [
+                  { "type": "Condition", "name": "is_at_pose", "args": [poses["temp_pose_2 + z_offset"]] },
+                  { "type": "Action", "name": "MovePose", "args": [poses["temp_pose_2 + z_offset"]] }
+                ]
+              },
+              {
+                "type": "Parallel",
+                "children": [
+                  { "type": "Condition", "name": "is_contact_detected", "args": [] },
+                  { "type": "Action", "name": "MoveDownUntillContact", "args": [] }
+                ]
+              },
+              { "type": "Action", "name": "OpenGripper", "args": [] },
+              {
+                "type": "Parallel",
+                "children": [
+                  { "type": "Condition", "name": "is_at_pose", "args": [poses["temp_pose_2 + z_offset"]] },
+                  { "type": "Action", "name": "MovePose", "args": [poses["temp_pose_2 + z_offset"]] }
+                ]
+              },
+              {
+                "type": "Parallel",
+                "children": [
+                  { "type": "Condition", "name": "is_at_pose", "args": [poses["blue_cube_3 + z_offset"]] },
+                  { "type": "Action", "name": "MovePose", "args": [poses["blue_cube_3 + z_offset"]] }
+                ]
+              },
+              {
+                "type": "Parallel",
+                "children": [
+                  { "type": "Condition", "name": "is_at_pose", "args": [poses["blue_cube_3"]] },
+                  { "type": "Action", "name": "MovePose", "args": [poses["blue_cube_3"]] }
+                ]
+              },
+              { "type": "Action", "name": "CloseGripper", "args": [] },
+              {
+                "type": "Parallel",
+                "children": [
+                  { "type": "Condition", "name": "is_at_pose", "args": [poses["blue_cube_3 + z_offset"]] },
+                  { "type": "Action", "name": "MovePose", "args": [poses["blue_cube_3 + z_offset"]] }
+                ]
+              },
+              {
+                "type": "Parallel",
+                "children": [
+                  { "type": "Condition", "name": "is_at_pose", "args": [poses["temp_pose_2 + z_offset"]] },
+                  { "type": "Action", "name": "MovePose", "args": [poses["temp_pose_2 + z_offset"]] }
+                ]
+              },
+              {
+                "type": "Parallel",
+                "children": [
+                  { "type": "Condition", "name": "is_contact_detected", "args": [] },
+                  { "type": "Action", "name": "MoveDownUntillContact", "args": [] }
+                ]
+              },
+              { "type": "Action", "name": "OpenGripper", "args": [] },
+              {
+                "type": "Parallel",
+                "children": [
+                  { "type": "Condition", "name": "is_at_pose", "args": [poses["temp_pose_2 + z_offset"]] },
+                  { "type": "Action", "name": "MovePose", "args": [poses["temp_pose_2 + z_offset"]] }
+                ]
+              },
+            
+                  { "type": "Action", "name": "MoveJoints", "args": [poses["home"]] }
+            
+            ]
+          }
         ]
-    }
+      }
 
     bt_manager = BehaviorTreeManager(pose_controller=pp, joints_controller=jj, data_listener=listener)
     

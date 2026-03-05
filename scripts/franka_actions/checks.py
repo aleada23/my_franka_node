@@ -17,7 +17,7 @@ class IsGripperOpen(py_trees.behaviour.Behaviour):
         return py_trees.common.Status.FAILURE
 
 class IsAtPose(py_trees.behaviour.Behaviour):
-    def __init__(self, name, data_listener, target_pose, atol=0.01):
+    def __init__(self, name, data_listener, target_pose, atol=0.05):
         super().__init__(name)
         self.target_pose = np.array(target_pose)
         self.atol = atol
