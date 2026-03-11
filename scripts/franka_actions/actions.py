@@ -6,6 +6,7 @@ import py_trees
 from franka_gripper.msg import MoveAction, MoveGoal
 import franka_actions.panda_simb_jac as jac 
 import switch_controller as ctrl_switch
+import time
 
 class MovePose(py_trees.behaviour.Behaviour):
     def __init__(self, name, pose_controller, target_pose):
@@ -29,8 +30,9 @@ class OpenGripper(py_trees.behaviour.Behaviour):
     def initialise(self):
         self.client.wait_for_server()
         self.client.send_goal(MoveGoal(width=0.08, speed=0.1))
-
-    def update(self):
+        self.init_time = rospy.get_time()
+        
+    def update(self): 
         state = self.client.get_state()
         if state == 1:
             return py_trees.common.Status.SUCCESS
@@ -43,6 +45,7 @@ class CloseGripper(py_trees.behaviour.Behaviour):
 
     def initialise(self):
         self.client.wait_for_server()
+        self.init_time = rospy.get_time()
         self.client.send_goal(MoveGoal(width=0.0, speed=0.1))
 
     def update(self):

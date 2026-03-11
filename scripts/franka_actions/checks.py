@@ -5,7 +5,7 @@ import py_trees
 import franka_actions.panda_simb_jac as jac 
 
 class IsGripperOpen(py_trees.behaviour.Behaviour):
-    def __init__(self, name, data_listener, threshold=0.03):
+    def __init__(self, name, data_listener, threshold=0.01):
         super().__init__(name)
         self.data_listener = data_listener
         self.threshold = threshold
@@ -17,7 +17,11 @@ class IsGripperOpen(py_trees.behaviour.Behaviour):
         return py_trees.common.Status.FAILURE
 
 class IsAtPose(py_trees.behaviour.Behaviour):
+<<<<<<< HEAD
     def __init__(self, name, data_listener, target_pose, atol=0.05):
+=======
+    def __init__(self, name, data_listener, target_pose, atol=0.02):
+>>>>>>> updated functions with BTs
         super().__init__(name)
         self.target_pose = np.array(target_pose)
         self.atol = atol
@@ -27,12 +31,13 @@ class IsAtPose(py_trees.behaviour.Behaviour):
         try:
             (trans, rot) = self.listener.lookupTransform("panda_link0", "panda_EE", rospy.Time(0))
             dist = np.linalg.norm(np.array(trans) - self.target_pose[:3])
-            
+
             if dist < self.atol:
                 return py_trees.common.Status.SUCCESS
                 
             if isinstance(self.parent, py_trees.composites.Parallel):
                 return py_trees.common.Status.RUNNING
+
             return py_trees.common.Status.FAILURE
 
         except Exception as e:
@@ -73,7 +78,7 @@ class IsContactDetected(py_trees.behaviour.Behaviour):
         return py_trees.common.Status.FAILURE
 
 class IsAtHome(py_trees.behaviour.Behaviour):
-    def __init__(self, name, data_listener, home_config, atol=0.05):
+    def __init__(self, name, data_listener, home_config=[0, 0, 0, -1.57079, 0, 1.57079, -0.7853], atol=0.05):
         super().__init__(name)
         self.data_listener = data_listener
         self.home_config = np.array(home_config)

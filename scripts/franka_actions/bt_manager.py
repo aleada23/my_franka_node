@@ -26,9 +26,6 @@ class BehaviorTreeManager:
         }
 
     def build_tree_from_json(self, node_data):
-        """
-        Recursively builds the tree from the dictionary structure.
-        """
         node_type = node_data.get("type")
         
         if node_type == "Sequence":
@@ -85,7 +82,7 @@ class BehaviorTreeManager:
             root_data = json_structure["O_BT"]
         else:
             root_data = json_structure
-            
+              
         self.root_node = py_trees.trees.BehaviourTree(self.build_tree_from_json(root_data))
         return self.root_node
 
